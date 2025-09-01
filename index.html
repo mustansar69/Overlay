@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Overlay Control Panel</title>
+  <style>
+    /* ===== Base ===== */
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    /* ===== Control Panel ===== */
+    .control-panel {
+      background: rgba(255,255,255,0.95);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      padding: 16px 22px; gap: 14px; display: flex; flex-wrap: wrap; align-items: center;
+      max-width: 95vw;
+    }
+    .control-panel label { font-size: 0.9em; font-weight: 600; color: #444; margin-right: 6px; }
+    .control-panel input[type="text"]{
+      width: 540px; padding: 12px 14px; border-radius: 8px; border: 2px solid #e1e5e9; background: #fff;
+      transition: border-color .2s, box-shadow .2s; font-size: 16px;
+    }
+    .control-panel input[type="text"]:focus{ outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,.12); }
+    .control-panel input[type="range"]{ width: 160px; height: 6px; border-radius: 3px; background: #e1e5e9; appearance: none; outline: none; }
+    .control-panel input[type="range"]::-webkit-slider-thumb{ appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #667eea; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .2s; }
+    .control-panel input[type="range"]::-webkit-slider-thumb:hover{ transform: scale(1.06); }
+    .control-panel input[type="range"]::-moz-range-thumb{ width: 18px; height: 18px; border-radius: 50%; background: #667eea; border: none; box-shadow: 0 2px 6px rgba(0,0,0,.2); cursor: pointer; }
+    .control-panel input[type="color"], .swatch {
+      width: 40px; height: 40px; border-radius: 8px; border: 2px solid #e1e5e9; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .control-panel .row { display: inline-flex; align-items: center; gap: 10px; }
+    select { padding: 8px 10px; border-radius: 6px; border: 2px solid #e1e5e9; background: #fff; }
+    .btn{ padding: 10px 12px; border-radius: 8px; border: 0; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .btn-danger{ background:#ef4444; color:#fff; }
+    .btn-danger:hover{ filter: brightness(1.05); }
+    /* ===== 16:9 Preview ===== */
+    .preview-wrap { width: min(90vw, 960px); }
+    .preview { position: relative; width: 100%; }
+    .preview::before{ content: ""; display: block; padding-top: 56.25%; }
+    .preview > .surface{
+      --bg: #000;
+      position: absolute; inset: 0; background: var(--bg);
+      border: 1px solid rgba(255,255,255,0.35); border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+      overflow: hidden; cursor: crosshair;
+    }
+    /* ===== Draggable transparent text ===== */
+    .overlay-text{
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      color: #fff; opacity: 1; background: transparent; border: none; outline: none; box-shadow: none;
+      font-weight: 700; line-height: 1.2; white-space: pre-wrap; text-align: center;
+      pointer-events: auto; user-select: none; cursor: grab; z-index: 10;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
+      transition: opacity .12s ease, color .12s ease, background-color .12s ease, width .12s ease, text-shadow .12s ease;
+      width: 60%; padding: 6px 10px; border-radius: 8px;
+      overflow-wrap: anywhere; word-break: break-word;
+      text-shadow: none;
+    }
+    .overlay-text:active{ cursor: grabbing; }
+    /* Mobile tweaks */
+    @media (max-width: 768px){
+      .control-panel{ padding: 12px 14px; gap: 10px; justify-content: center; }
+      .control-panel input[type="text"]{ width: 260px; }
+      .control-panel input[type="range"]{ width: 120px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="control-panel" role="region" aria-label="Overlay Controls">
+    <div class="row">
+      <label for="textInput">Text</label>
+      <input id="textInput" type="text" placeholder="Enter overlay text" value="Overlay Text" />
+      <button id="clearBtn" type="button" class="btn btn-danger" title="Clear text">Clear</button>
+    </div>
+    <div class="row">
+      <label for="fontSize">Size</label>
+      <input id="fontSize" type="range" min="0.5" max="15" step="0.1" value="4" />
+    </div>
+    <div class="row">
+      <label for="weightSlider">Bold</label>
+      <input id="weightSlider" type="range" min="100" max="900" step="50" value="700" />
+    </div>
+    <div class="row">
+      <label for="colorPicker">Text</label>
+      <input id="colorPicker" type="color" value="#ffffff" />
+    </div>
+    <div class="row">
+      <label for="highlightColor">Highlight</label>
+      <input id="highlightColor" type="color" value="#000000" />
+      <label for="highlightAlpha">Intensity</label>
+      <input id="highlightAlpha" type="range" min="0" max="1" step="0.01" value="0" />
+    </div>
+    <div class="row">
+      <label for="opacitySlider">Text Opacity</label>
+      <input id="opacitySlider" type="range" min="0.1" max="1" step="0.01" value="1" />
+    </div>
+    <div class="row">
+      <label for="widthSlider">Box Width</label>
+      <input id="widthSlider" type="range" min="10" max="100" step="1" value="60" />
+    </div>
+    <div class="row">
+      <label for="bgSelect">Canvas</label>
+      <select id="bgSelect">
+        <option value="black" selected>Black</option>
+        <option value="white">White</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="shadowToggle">Shadow</label>
+      <input id="shadowToggle" type="checkbox" />
+    </div>
+    <div class="row">
+      <label for="showToggle">Show</label>
+      <input id="showToggle" type="checkbox" checked />
+    </div>
+  </div>
+  <div class="preview-wrap">
+    <div class="preview" aria-hidden="true">
+      <div id="surface" class="surface" title="Click anywhere to move. Drag the text to fine-tune.">
+        <div id="overlayText" class="overlay-text">Overlay Text</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function(){
+      const surface = document.getElementById('surface');
+      const textEl  = document.getElementById('overlayText');
+      const textInput      = document.getElementById('textInput');
+      const clearBtn       = document.getElementById('clearBtn');
+      const fontSize       = document.getElementById('fontSize');
+      const weightSlider   = document.getElementById('weightSlider');
+      const opacitySlider  = document.getElementById('opacitySlider');
+      const colorPicker    = document.getElementById('colorPicker');
+      const highlightColor = document.getElementById('highlightColor');
+      const highlightAlpha = document.getElementById('highlightAlpha');
+      const widthSlider    = document.getElementById('widthSlider');
+      const bgSelect       = document.getElementById('bgSelect');
+      const shadowToggle   = document.getElementById('shadowToggle');
+      const showToggle     = document.getElementById('showToggle');
+      const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('overlay-sync') : null;
+      const state = {
+        text: textInput.value,
+        x: 50, y: 50,
+        fontPercent: +fontSize.value,
+        weight: +weightSlider.value,
+        opacity: +opacitySlider.value,
+        color: colorPicker.value,
+        widthPct: +widthSlider.value,
+        highlightColor: highlightColor.value,
+        highlightAlpha: +highlightAlpha.value,
+        bg: bgSelect.value,
+        shadow: !!shadowToggle.checked,
+        visible: showToggle.checked
+      };
+      function hexToRgb(hex){
+        let h = (hex || '').replace('#','');
+        if(h.length === 3){ h = h.split('').map(c=>c+c).join(''); }
+        const r = parseInt(h.slice(0,2) || '00', 16);
+        const g = parseInt(h.slice(2,4) || '00', 16);
+        const b = parseInt(h.slice(4,6) || '00', 16);
+        return {r,g,b};
+      }
+      function publish(){
+        const payload = { ...state, timestamp: Date.now() };
+        try{ localStorage.setItem('overlay-live', JSON.stringify(payload)); }catch(e){}
+        if (bc) try{ bc.postMessage(payload); }catch(e){}
+      }
+      function apply(){
+        textEl.textContent = state.text || '';
+        textEl.style.opacity = String(state.opacity);
+        textEl.style.color = state.color;
+        textEl.style.fontWeight = String(state.weight);
+        textEl.style.width = state.widthPct + '%';
+        const {r,g,b} = hexToRgb(state.highlightColor);
+        textEl.style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${state.highlightAlpha})`;
+        const hasHighlight = state.highlightAlpha > 0.001;
+        const allowShadow = state.shadow && !hasHighlight;
+        textEl.style.textShadow = allowShadow ? '2px 2px 4px rgba(0,0,0,.7)' : 'none';
+        const box = surface.getBoundingClientRect();
+        const px = (state.fontPercent / 100) * box.width;
+        textEl.style.fontSize = Math.max(8, px) + 'px';
+        const x = Math.max(0, Math.min(100, state.x));
+        const y = Math.max(0, Math.min(100, state.y));
+        textEl.style.left = x + '%';
+        textEl.style.top  = y + '%';
+        textEl.style.transform = 'translate(-50%, -50%)';
+        textEl.style.display = state.visible && state.text.trim() ? 'block' : 'none';
+        surface.style.setProperty('--bg', state.bg === 'white' ? '#fff' : '#000');
+      }
+      function clientToPct(clientX, clientY){
+        const box = surface.getBoundingClientRect();
+        const px = ((clientX - box.left) / box.width)  * 100;
+        const py = ((clientY - box.top)  / box.height) * 100;
+        return { x: Math.max(0, Math.min(100, px)), y: Math.max(0, Math.min(100, py)) };
+      }
+      textInput.addEventListener('input',  e => { state.text = e.target.value; apply(); publish(); });
+      clearBtn.addEventListener('click',   () => { textInput.value=''; state.text=''; apply(); publish(); });
+      fontSize.addEventListener('input',   e => { state.fontPercent = +e.target.value; apply(); publish(); });
+      weightSlider.addEventListener('input', e => { state.weight = +e.target.value; apply(); publish(); });
+      opacitySlider.addEventListener('input', e => { state.opacity = +e.target.value; apply(); publish(); });
+      colorPicker.addEventListener('input', e => { state.color = e.target.value; apply(); publish(); });
+      highlightColor.addEventListener('input', e => { state.highlightColor = e.target.value; apply(); publish(); });
+      highlightAlpha.addEventListener('input', e => { state.highlightAlpha = +e.target.value; apply(); publish(); });
+      widthSlider.addEventListener('input', e => { state.widthPct = +e.target.value; apply(); publish(); });
+      bgSelect.addEventListener('change', e => { state.bg = e.target.value; apply(); publish(); });
+      shadowToggle.addEventListener('change', e => { state.shadow = !!e.target.checked; apply(); publish(); });
+      showToggle.addEventListener('change', e => { state.visible = !!e.target.checked; apply(); publish(); });
+      let dragging = false;
+      function startDragFromEvent(ev){
+        dragging = true; textEl.classList.add('dragging');
+        const {x,y} = clientToPct(ev.clientX, ev.clientY);
+        state.x = x; state.y = y; apply(); publish();
+      }
+      function moveDrag(ev){
+        if(!dragging) return; const {x,y} = clientToPct(ev.clientX, ev.clientY); state.x=x; state.y=y; apply(); publish();
+      }
+      function endDrag(){ dragging = false; textEl.classList.remove('dragging'); }
+      surface.addEventListener('mousedown', (e)=>{ if(e.button!==0) return; e.preventDefault(); startDragFromEvent(e); });
+      window.addEventListener('mousemove', moveDrag);
+      window.addEventListener('mouseup', endDrag);
+      surface.addEventListener('touchstart', (e)=>{ if(e.touches.length!==1) return; const t=e.touches[0]; startDragFromEvent(t); e.preventDefault(); }, {passive:false});
+      window.addEventListener('touchmove', (e)=>{ if(!dragging||e.touches.length!==1) return; const t=e.touches[0]; moveDrag(t); }, {passive:false});
+      window.addEventListener('touchend', endDrag);
+      window.addEventListener('resize', ()=>{ apply(); });
+      apply(); publish();
+      window.addEventListener('storage', (e)=>{ if(e.key!== 'overlay-live') return; });
+      if(bc){ bc.onmessage = ()=>{}; }
+    })();
+  </script>
+</body>
+</html>

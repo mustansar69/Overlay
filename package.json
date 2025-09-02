@@ -1,0 +1,11 @@
+{
+  "name": "overlay",
+  "version": "1.0.0",
+  "description": "Overlay bookmarklet control panel",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^23.0.0"
+  }
+}

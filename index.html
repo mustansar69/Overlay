@@ -119,7 +119,7 @@
     <div class="row">
       <label for="showToggle">Show</label>
       <input id="showToggle" type="checkbox" checked />
-    </div>
+        </div>
   </div>
   <div class="preview-wrap">
     <div class="preview" aria-hidden="true">
@@ -171,6 +171,8 @@
         const payload = { ...state, timestamp: Date.now() };
         try{ localStorage.setItem('overlay-live', JSON.stringify(payload)); }catch(e){}
         if (bc) try{ bc.postMessage(payload); }catch(e){}
+        try{ window.postMessage(payload, '*'); }catch(e){}
+        if (window.opener) try{ window.opener.postMessage(payload, '*'); }catch(e){}
       }
       function apply(){
         textEl.textContent = state.text || '';
@@ -196,15 +198,7 @@
       }
       function clientToPct(clientX, clientY){
         const box = surface.getBoundingClientRect();
-        const px = ((clientX - box.left) / box.width)  * 100;
-        const py = ((clientY - box.top)  / box.height) * 100;
-        return { x: Math.max(0, Math.min(100, px)), y: Math.max(0, Math.min(100, py)) };
-      }
-      textInput.addEventListener('input',  e => { state.text = e.target.value; apply(); publish(); });
-      clearBtn.addEventListener('click',   () => { textInput.value=''; state.text=''; apply(); publish(); });
-      fontSize.addEventListener('input',   e => { state.fontPercent = +e.target.value; apply(); publish(); });
-      weightSlider.addEventListener('input', e => { state.weight = +e.target.value; apply(); publish(); });
-      opacitySlider.addEventListener('input', e => { state.opacity = +e.target.value; apply(); publish(); });
+@@ -208,31 +207,29 @@
       colorPicker.addEventListener('input', e => { state.color = e.target.value; apply(); publish(); });
       highlightColor.addEventListener('input', e => { state.highlightColor = e.target.value; apply(); publish(); });
       highlightAlpha.addEventListener('input', e => { state.highlightAlpha = +e.target.value; apply(); publish(); });
